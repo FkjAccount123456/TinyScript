@@ -82,6 +82,8 @@ void test_table() {
   object_insert(obj, "BB", val_int(22));
   _test_table_items(obj);
 
+  printf("%llu\n", obj.o->len);
+
   gc.len--;
 
   gc_free(gc_collect(&gc));
@@ -121,9 +123,9 @@ void run_code(char *code) {
   compiler c = compiler_new();
   size_t reserve = compile_program(&gc, &c, ast);
   compiler_free_data(&c);
-  for (size_t i = 0; i < c.code.len; i++)
-    printf("%llu ", i), bytecode_print(c.code.v[i]), puts("");
-  puts("");
+  // for (size_t i = 0; i < c.code.len; i++)
+  //   printf("%llu ", i), bytecode_print(c.code.v[i]), puts("");
+  // puts("");
   run(&gc, c.code, reserve, extglobal);
   compiler_free_code(&c);
   stmt_free(ast);

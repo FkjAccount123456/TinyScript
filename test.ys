@@ -60,3 +60,31 @@ while (1) {
 
 var fn = func(x, y) { return x + y; };
 println(fn(1, 2));
+
+var lst = [];
+i = 0;
+while (1) {
+    i = i + 1;
+    if (i > 10) {
+        break;
+    }
+    if (i == 5) {
+        continue;
+    }
+    lst.append(i);
+}
+lst.extend(lst);
+i = 0;
+while (i < len(lst)) {
+    print(lst[i], " ");
+    i = i + 1;
+}
+println();
+
+var objkeys = obj.keys();
+i = 0;
+while (i < len(objkeys)) {
+    print(objkeys[i], " ");
+    i = i + 1;
+}
+println();

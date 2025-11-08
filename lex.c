@@ -152,6 +152,7 @@ tokenlist tokenize(char *code) {
           seq_append(s, code[pos++]);
         }
       }
+      seq_append(s, 0);
       if (pos >= len) {
         printf("Unexpect EOF in string literal\n");
         exit(1);

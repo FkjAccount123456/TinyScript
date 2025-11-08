@@ -65,8 +65,11 @@ typedef struct gc_root {
   val all_gc;
   val *roots;
   size_t len, max;
+  val metatables[T_ENV];
 } gc_root;
 
+void gc_init_mt(gc_root *gc);
+val *gc_mt_find(gc_root *gc, type_t tp, char *name);
 gc_root gc_init();
 void gc_finalize(gc_root *gc);
 void gc_recurse(val *v);
@@ -147,6 +150,7 @@ val val_env(gc_root *gc, val parent, val varlist);
 void str_append(val s, char *c, size_t len);
 
 void list_append(val l, val v);
+void list_reserve(val l, size_t r);
 
 size_t get_str_hash(char *str, size_t len);
 

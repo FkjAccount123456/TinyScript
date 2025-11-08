@@ -17,10 +17,21 @@ gc_root gc_init() {
   gc.len = 0;
   gc.max = 8;
   gc.roots = malloc(sizeof(val) * gc.max);
+
+  gc_init_mt(&gc);
+  for (size_t i = 0; i < T_ENV; i++)
+    gc_add_root(&gc, gc.metatables[i]);
+
   return gc;
 }
 
+val *gc_mt_find(gc_root *gc, type_t tp, char *name) {
+  return object_get(gc->metatables[tp], name);
+}
+
 void gc_finalize(gc_root *gc) {
+  gc->len -= T_ENV;
+  gc_free(gc_collect(gc));
   if (gc_next(&gc->all_gc)) {
     printf("gc_finalize failed\n");
     exit(1);
@@ -111,6 +122,7 @@ char _gc_type_size[] = {
   [T_STR] = sizeof(str),
   [T_LIST] = sizeof(list),
   [T_OBJ] = sizeof(object),
+  [T_TYPE] = sizeof(object),
   [T_FUNC] = sizeof(func),
   [T_METHOD] = sizeof(func),
   [T_EXPANDED_METHOD] = sizeof(expanded_method),
@@ -118,7 +130,6 @@ char _gc_type_size[] = {
 };
 
 val gc_add(gc_root *gc, type_t tp) {
-  assert(type_is_gc(tp));
   val *v = malloc(sizeof(val));
   val_ptr(v) = malloc(_gc_type_size[tp]);
   v->tp = tp;
@@ -243,6 +254,14 @@ void list_append(val l, val v) {
     l.l->data = realloc(l.l->data, l.l->max * sizeof(val));
   }
   l.l->data[l.l->len++] = v;
+}
+
+void list_reserve(val l, size_t r) {
+  if (l.l->max < r) {
+    while (l.l->max < r)
+      l.l->max <<= 1;
+    l.l->data = realloc(l.l->data, l.l->max * sizeof(val));
+  }
 }
 
 size_t get_str_hash(char *str, size_t len) {

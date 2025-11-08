@@ -28,9 +28,6 @@ void run(gc_root *gc, vmcodelist codelist, size_t reserve, val extglobal) {
     // for (size_t i = 0; i < stack.l->len; i++)
     //   val_debug(stack.l->data[i]), putchar(' ');
     // puts("");
-    // for (size_t i = 0; i < env.env->varlist.l->len; i++)
-    //   val_debug(env.env->varlist.l->data[i]), putchar(' ');
-    // puts("");
     // printf("%llu ", pc), bytecode_print(code), printf("\n");
     switch (code.head) {
     case C_EXIT:
@@ -158,14 +155,14 @@ void run(gc_root *gc, vmcodelist codelist, size_t reserve, val extglobal) {
     }
     case C_INDEX: {
       val index = stack.l->data[--stack.l->len];
-      val obj = stack.l->data[--stack.l->len];
-      if (obj.tp == T_LIST || index.tp == T_INT) {
+      val base = stack.l->data[--stack.l->len];
+      if (base.tp == T_LIST || index.tp == T_INT) {
         // 没有必要做越界检查，反正也没有错误处理机制
-        list_append(stack, index.l->data[obj.i]);
-      } else if (obj.tp == T_STR && index.tp == T_INT) {
-        list_append(stack, val_int(obj.s->data[index.i]));
-      } else if ((obj.tp == T_OBJ || obj.tp == T_TYPE) && index.tp == T_STR) {
-        val *v = object_get(obj, index.s->data);
+        list_append(stack, base.l->data[index.i]);
+      } else if (base.tp == T_STR && index.tp == T_INT) {
+        list_append(stack, val_int(base.s->data[index.i]));
+      } else if ((base.tp == T_OBJ || base.tp == T_TYPE) && index.tp == T_STR) {
+        val *v = object_get(base, index.s->data);
         if (!v) {
           printf("Cannot find key %s in object\n", index.s->data);
           exit(1);
@@ -282,18 +279,20 @@ void run(gc_root *gc, vmcodelist codelist, size_t reserve, val extglobal) {
     }
     case C_ATTR: {
       val obj = stack.l->data[--stack.l->len];
-      if (!(obj.tp == T_OBJ || obj.tp == T_TYPE)) {
-        // 后面会从metatable里找，现在基础类型的mt还没写，所以先报错
-        printf("Cannot get attribute from non-object\n");
-        exit(1);
-      }
-      val *v = object_get(obj, code.s);
+      val *v = NULL;
+      bool from_mt = false;
+      if (obj.tp == T_OBJ || obj.tp == T_TYPE)
+        v = object_get(obj, code.s);
       if (!v) {
-        printf("Cannot find attribute %s in object\n", code.s);
-        exit(1);
+        v = gc_mt_find(gc, obj.tp, code.s);
+        from_mt = true;
+        if (!v) {
+          printf("Cannot find attribute %s in object\n", code.s);
+          exit(1);
+        }
       }
       val res = *v;
-      if ((res.tp == T_CMETHOD || res.tp == T_METHOD) && obj.tp == T_OBJ)
+      if ((res.tp == T_CMETHOD || res.tp == T_METHOD) && (obj.tp != T_TYPE || from_mt))
         res = val_expanded_method(gc, obj, res);
       list_append(stack, res);
       break;
