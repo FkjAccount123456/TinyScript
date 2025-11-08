@@ -1,0 +1,62 @@
+// Project Soaring A1
+/* Multi-line
+comment */
+
+func test() {
+    print("Hello, world!\n");
+}
+
+println(test());
+
+// 复杂运算测试
+println(1 + 2 * 3 / (4 - 5 % (6 ^ 7) & 8 + 7) << 9 >> 10);
+
+func fac(n) {
+    if (n == 0) {
+        return 1;
+    } else {
+        return n * fac(n - 1);
+    }
+}
+
+println(fac(10));
+
+var obj = {
+    a: 1,
+    l: [1, 2, 3],
+    setA: method(self, n) {
+        self.a = n;
+    },
+    getA: method(self) {
+        return self.a;
+    },
+    print: method(self) {
+        print("obj: a = ", self.a, " l.type = ", typeof(self.l), "\n");
+    },
+    print_fn: func(self) {
+        print("obj: a = ", self.a, " l.type = ", typeof(self.l), "\n");
+    }
+};
+
+obj.print();
+println(obj.getA());
+obj.setA(2);
+obj.print();
+obj.print_fn(obj);
+
+println(0.2 + 0.1);
+
+var i = 0;
+while (1) {
+    i = i + 1;
+    if (i > 10) {
+        break;
+    }
+    if (i == 5) {
+        continue;
+    }
+    println(i);
+}
+
+var fn = func(x, y) { return x + y; };
+println(fn(1, 2));
