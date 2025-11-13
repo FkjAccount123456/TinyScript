@@ -207,7 +207,10 @@ void compile_expr(gc_root *gc, compiler *c, expression *node) {
   case E_ID: {
     varpos v = compile_find_var(c, node->id_expr);
     if (v.scope == -1)
-      compiler_add(bytecode_init(C_LOADEXT, s, node->id_expr));
+      if (str_is_short(node->id_expr))
+        compiler_add(bytecode_init(C_LOADEXT_SHORTSTR, l, get_str_hash(node->id_expr, -1)));
+      else
+        compiler_add(bytecode_init(C_LOADEXT, s, node->id_expr));
     else
       compiler_add(bytecode_init(C_LOADV, v, v));
     break;
@@ -318,7 +321,10 @@ void compile_expr(gc_root *gc, compiler *c, expression *node) {
   }
   case E_ATTR: {
     compile_expr(gc, c, node->attr_expr.base);
-    compiler_add(bytecode_init(C_ATTR, s, node->attr_expr.attr));
+    if (str_is_short(node->attr_expr.attr))
+      compiler_add(bytecode_init(C_ATTR_SHORTSTR, l, get_str_hash(node->attr_expr.attr, -1)));
+    else
+      compiler_add(bytecode_init(C_ATTR, s, node->attr_expr.attr));
     break;
   }
   case E_INDEX: {

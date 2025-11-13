@@ -73,6 +73,7 @@ typedef struct gc_root {
 
 void gc_init_mt(gc_root *gc);
 val *gc_mt_find(gc_root *gc, type_t tp, char *name);
+val *gc_mt_find_shortstr(gc_root *gc, type_t tp, size_t hash);
 gc_root gc_init();
 void gc_finalize(gc_root *gc);
 void gc_recurse(val *v);
@@ -110,6 +111,7 @@ typedef struct list {
 } list;
 
 struct obj_entry {
+  size_t len;
   size_t hash;
   char *key;
   val val;
@@ -155,11 +157,19 @@ void str_append(val s, char *c, size_t len);
 void list_append(val l, val v);
 void list_reserve(val l, size_t r);
 
+// 取决于hash算法
+#define SHORTSTR_MAX 9
+
+bool str_is_short(char *str);
+
 size_t get_str_hash(char *str, size_t len);
 
 void object_insert(val obj, char *key, val val);
+void object_insert_shortstr(val obj, size_t hash, val val);
 val *_object_get(val obj, char *key);
+val *_object_get_shortstr(val obj, size_t hash);
 val *object_get(val obj, char *key);
+val *object_get_shortstr(val obj, size_t hash);
 
 // and和or需要短路运算，不在此定义
 

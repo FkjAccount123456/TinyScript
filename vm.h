@@ -22,6 +22,7 @@ typedef enum opcode {
   C_INDEX,
   C_SETINDEX,
   C_ATTR,
+  C_ATTR_SHORTSTR,
   C_SETATTR,
   C_CALL,
   C_RET,
@@ -33,6 +34,7 @@ typedef enum opcode {
   C_LOADV,
   C_SETV,
   C_LOADEXT,
+  C_LOADEXT_SHORTSTR,
 } opcode;
 
 typedef struct vmcode {

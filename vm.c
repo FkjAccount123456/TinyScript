@@ -302,6 +302,15 @@ void run(gc_root *gc, vmcodelist codelist, size_t reserve, val extglobal) {
       list_append(stack, *v);
       break;
     }
+    case C_LOADEXT_SHORTSTR: {
+      val *v = object_get_shortstr(extglobal, code.l);
+      if (!v) {
+        printf("Cannot find key in external scope\n");
+        exit(1);
+      }
+      list_append(stack, *v);
+      break;
+    }
     case C_ATTR: {
       val obj = stack.l->data[--stack.l->len];
       val *v = NULL;
@@ -313,6 +322,27 @@ void run(gc_root *gc, vmcodelist codelist, size_t reserve, val extglobal) {
         from_mt = true;
         if (!v) {
           printf("Cannot find attribute %s in object\n", code.s);
+          exit(1);
+        }
+      }
+      val res = *v;
+      if ((res.tp == T_CMETHOD || res.tp == T_METHOD) &&
+          (obj.tp != T_TYPE || from_mt))
+        res = val_expanded_method(gc, obj, res);
+      list_append(stack, res);
+      break;
+    }
+    case C_ATTR_SHORTSTR: {
+      val obj = stack.l->data[--stack.l->len];
+      val *v = NULL;
+      bool from_mt = false;
+      if (obj.tp == T_OBJ || obj.tp == T_TYPE)
+        v = object_get_shortstr(obj, code.l);
+      if (!v) {
+        v = gc_mt_find_shortstr(gc, obj.tp, code.l);
+        from_mt = true;
+        if (!v) {
+          printf("Cannot find attribute in object\n");
           exit(1);
         }
       }
@@ -406,6 +436,9 @@ void bytecode_print(vmcode code) {
   case C_ATTR:
     printf("ATTR %s", code.s);
     break;
+  case C_ATTR_SHORTSTR:
+    printf("ATTR_SHORTSTR %llu", code.l);
+    break;
   case C_SETATTR:
     printf("SETATTR %s", code.s);
     break;
@@ -438,6 +471,9 @@ void bytecode_print(vmcode code) {
     break;
   case C_LOADEXT:
     printf("LOADEXT %s", code.s);
+    break;
+  case C_LOADEXT_SHORTSTR:
+    printf("LOADEXT_SHORTSTR %llu", code.l);
     break;
   default:
     printf("Unknown opcode %d", code.head);

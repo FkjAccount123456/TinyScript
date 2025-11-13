@@ -1,8 +1,8 @@
 #include "vals.h"
 #include <assert.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 
 gc_root gc_init() {
   gc_root gc;
@@ -27,6 +27,9 @@ gc_root gc_init() {
 
 val *gc_mt_find(gc_root *gc, type_t tp, char *name) {
   return object_get(gc->metatables[tp], name);
+}
+val *gc_mt_find_shortstr(gc_root *gc, type_t tp, size_t hash) {
+  return object_get_shortstr(gc->metatables[tp], hash);
 }
 
 void gc_finalize(gc_root *gc) {
@@ -120,14 +123,14 @@ void gc_add_root(gc_root *gc, val v) {
 }
 
 char _gc_type_size[] = {
-  [T_STR] = sizeof(str),
-  [T_LIST] = sizeof(list),
-  [T_OBJ] = sizeof(object),
-  [T_TYPE] = sizeof(object),
-  [T_FUNC] = sizeof(func),
-  [T_METHOD] = sizeof(func),
-  [T_EXPANDED_METHOD] = sizeof(expanded_method),
-  [T_ENV] = sizeof(env),
+    [T_STR] = sizeof(str),
+    [T_LIST] = sizeof(list),
+    [T_OBJ] = sizeof(object),
+    [T_TYPE] = sizeof(object),
+    [T_FUNC] = sizeof(func),
+    [T_METHOD] = sizeof(func),
+    [T_EXPANDED_METHOD] = sizeof(expanded_method),
+    [T_ENV] = sizeof(env),
 };
 
 val gc_add(gc_root *gc, type_t tp) {
@@ -265,10 +268,17 @@ void list_reserve(val l, size_t r) {
   }
 }
 
+bool str_is_short(char *str) {
+  for (size_t i = 0; str[i]; i++)
+    if (i == SHORTSTR_MAX)
+      return false;
+  return true;
+}
+
 size_t get_str_hash(char *str, size_t len) {
   size_t hash = 0;
   for (size_t i = 0; i < len && str[i]; i++)
-    hash = hash * 31 + str[i];
+    hash = hash * 131 + str[i];
   return hash;
 }
 
@@ -284,6 +294,7 @@ void _object_insert(object *obj, char *key, val val) {
     if (obj->table[i] == -1) {
       obj->entrys[obj->len].key = key;
       obj->entrys[obj->len].val = val;
+      obj->entrys[obj->len].len = strlen(key);
       obj->entrys[obj->len].hash = hash;
       obj->table[i] = obj->len++;
       return;
@@ -317,12 +328,29 @@ val *_object_get(val obj, char *key) {
   size_t hash = get_str_hash(key, -1);
   size_t pos = hash % obj.o->mod;
   size_t i = pos;
-  // printf("Start looking for key %s with hash %llu at pos %llu\n", key, hash, pos);
+  // printf("Start looking for key %s with hash %llu at pos %llu\n", key, hash,
+  // pos);
   do {
     if (obj.o->table[i] == -1)
       return NULL;
     else if (obj.o->entrys[obj.o->table[i]].hash == hash &&
              !strcmp(obj.o->entrys[obj.o->table[i]].key, key))
+      return &obj.o->entrys[obj.o->table[i]].val;
+    i = (i + 1) % obj.o->mod;
+  } while (i != pos);
+  return NULL;
+}
+
+val *_object_get_shortstr(val obj, size_t hash) {
+  size_t pos = hash % obj.o->mod;
+  size_t i = pos;
+  // printf("Start looking for key %s with hash %llu at pos %llu\n", key, hash,
+  // pos);
+  do {
+    if (obj.o->table[i] == -1)
+      return NULL;
+    else if (obj.o->entrys[obj.o->table[i]].len <= SHORTSTR_MAX &&
+             obj.o->entrys[obj.o->table[i]].hash == hash)
       return &obj.o->entrys[obj.o->table[i]].val;
     i = (i + 1) % obj.o->mod;
   } while (i != pos);
@@ -342,7 +370,6 @@ void _check_obj(val obj) {
 }
 
 val *object_get(val obj, char *key) {
-  // printf("object_get %s\n", key);
   assert(obj.tp == T_OBJ || obj.tp == T_TYPE || obj.tp == T_LIST);
   raw_vals q = seq_init(raw_vals);
   seq_append(q, obj);
@@ -351,7 +378,6 @@ val *object_get(val obj, char *key) {
     val cur = q.v[q_head++];
     if (cur.tp == T_LIST) {
       for (size_t i = cur.l->len - 1; i >= 0; i--) {
-        // _check_obj(cur.l->data[i]);
         val *v = _object_get(cur.l->data[i], key);
         if (v) {
           free(q.v);
@@ -361,7 +387,6 @@ val *object_get(val obj, char *key) {
           seq_append(q, cur.l->data[i].o->meta);
       }
     } else {
-      // _check_obj(cur);
       val *v = _object_get(cur, key);
       if (v) {
         free(q.v);
@@ -370,7 +395,37 @@ val *object_get(val obj, char *key) {
       if (cur.o->meta.tp != T_NIL)
         seq_append(q, cur.o->meta);
     }
-    // puts(";");
+  }
+  free(q.v);
+  return NULL;
+}
+
+val *object_get_shortstr(val obj, size_t hash) {
+  assert(obj.tp == T_OBJ || obj.tp == T_TYPE || obj.tp == T_LIST);
+  raw_vals q = seq_init(raw_vals);
+  seq_append(q, obj);
+  size_t q_head = 0;
+  while (q_head < q.len) {
+    val cur = q.v[q_head++];
+    if (cur.tp == T_LIST) {
+      for (size_t i = cur.l->len - 1; i >= 0; i--) {
+        val *v = _object_get_shortstr(cur.l->data[i], hash);
+        if (v) {
+          free(q.v);
+          return v;
+        }
+        if (cur.l->data[i].o->meta.tp != T_NIL)
+          seq_append(q, cur.l->data[i].o->meta);
+      }
+    } else {
+      val *v = _object_get_shortstr(cur, hash);
+      if (v) {
+        free(q.v);
+        return v;
+      }
+      if (cur.o->meta.tp != T_NIL)
+        seq_append(q, cur.o->meta);
+    }
   }
   free(q.v);
   return NULL;

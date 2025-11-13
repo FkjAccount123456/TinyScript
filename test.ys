@@ -104,13 +104,21 @@ T.printA(t_a);
 println();
 
 var S = type(T) {
-    b: 20,
+    a_looooooooooooooooooog_b: 20,
     print: method(self) {
         self.printA();
-        println("S: b = ", self.b);
+        println("S: b = ", self.a_looooooooooooooooooog_b);
     }
 };
 
 var t_s = S {a: 30};
 t_s.print();
 S.printA(t_s);
+
+if (1) {
+    println(0);
+} else if (0) {
+    println(1);
+} else {
+    println(2);
+}
