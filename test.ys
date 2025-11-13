@@ -88,3 +88,29 @@ while (i < len(objkeys)) {
     i = i + 1;
 }
 println();
+
+type T {
+    a: 10,
+    printA: method(self) {
+        println("T: a = ", self.a);
+    }
+}
+
+var t_a = T {};
+t_a.printA();
+t_a.a = 20;
+T.printA(t_a);
+
+println();
+
+var S = type(T) {
+    b: 20,
+    print: method(self) {
+        self.printA();
+        println("S: b = ", self.b);
+    }
+};
+
+var t_s = S {a: 30};
+t_s.print();
+S.printA(t_s);

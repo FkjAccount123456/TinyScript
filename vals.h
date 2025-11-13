@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include "seq.h"
 
 typedef enum : unsigned char {
   T_NIL,
@@ -60,6 +61,8 @@ typedef struct val {
 #define val_float(F) ((val){.tp = T_FLOAT, .f = F})
 #define val_cfunc(CF) ((val){.tp = T_CFUNC, .cf = CF})
 #define val_cmethod(CF) ((val){.tp = T_CMETHOD, .cf = CF})
+
+typedef struct seq(val) raw_vals;
 
 typedef struct gc_root {
   val all_gc;

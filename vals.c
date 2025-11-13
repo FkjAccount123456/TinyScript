@@ -54,6 +54,7 @@ void gc_recurse(val *v) {
   case T_TYPE:
     for (size_t i = 0; i < v->o->len; i++)
       gc_recurse(&v->o->entrys[i].val);
+    gc_recurse(&v->o->meta);
     break;
   case T_METHOD:
   case T_FUNC:
@@ -328,13 +329,50 @@ val *_object_get(val obj, char *key) {
   return NULL;
 }
 
+void _check_obj(val obj) {
+  printf("check obj %d\n", obj.tp);
+  if (obj.tp == T_OBJ || obj.tp == T_TYPE)
+    for (size_t i = 0; i < obj.o->len; i++) {
+      printf("%s", obj.o->entrys[i].key);
+      printf(" : ");
+      val_debug(obj.o->entrys[i].val);
+      puts("");
+    }
+  puts("check obj over");
+}
+
 val *object_get(val obj, char *key) {
-  while (obj.tp == T_OBJ || obj.tp == T_TYPE) {
-    val *v = _object_get(obj, key);
-    if (v)
-      return v;
-    obj = obj.o->meta;
+  // printf("object_get %s\n", key);
+  assert(obj.tp == T_OBJ || obj.tp == T_TYPE || obj.tp == T_LIST);
+  raw_vals q = seq_init(raw_vals);
+  seq_append(q, obj);
+  size_t q_head = 0;
+  while (q_head < q.len) {
+    val cur = q.v[q_head++];
+    if (cur.tp == T_LIST) {
+      for (size_t i = cur.l->len - 1; i >= 0; i--) {
+        // _check_obj(cur.l->data[i]);
+        val *v = _object_get(cur.l->data[i], key);
+        if (v) {
+          free(q.v);
+          return v;
+        }
+        if (cur.l->data[i].o->meta.tp != T_NIL)
+          seq_append(q, cur.l->data[i].o->meta);
+      }
+    } else {
+      // _check_obj(cur);
+      val *v = _object_get(cur, key);
+      if (v) {
+        free(q.v);
+        return v;
+      }
+      if (cur.o->meta.tp != T_NIL)
+        seq_append(q, cur.o->meta);
+    }
+    // puts(";");
   }
+  free(q.v);
   return NULL;
 }
 
@@ -555,6 +593,9 @@ void val_debug(val a) {
     break;
   case T_CFUNC:
     printf("<c function>");
+    break;
+  case T_CMETHOD:
+    printf("<c method>");
     break;
   case T_FUNC:
     printf("<function>");

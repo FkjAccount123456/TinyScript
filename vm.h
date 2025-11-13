@@ -15,6 +15,8 @@ typedef enum opcode {
   C_UNARY,
   C_BUILDLIST,
   C_BUILDOBJ,
+  C_INITOBJ,
+  C_BUILDTYPE,
   C_BUILDFUNC,
   C_BUILDMETHOD,
   C_INDEX,

@@ -156,8 +156,19 @@ void compile_stmt(gc_root *gc, compiler *c, statement *node) {
     break;
   }
   case S_TYPESTMT: {
-    printf("Type definition not supported\n");
-    exit(1);
+    seq_append(c->objkeys, seq_init(str_list));
+    for (size_t i = 0; i < node->typestmt.parents.len; i++)
+      compile_expr(gc, c, node->typestmt.parents.v[i]);
+    for (size_t i = 0; i < node->typestmt.decls.len; i++) {
+      decl_t decl = node->typestmt.decls.v[i];
+      seq_append(c->objkeys.v[c->objkeys.len - 1], decl.name);
+      compile_expr(gc, c, decl.init);
+    }
+    c->objkeys.v[c->objkeys.len - 1].Tsize = node->typestmt.parents.len;
+    compiler_add(bytecode_init(C_BUILDTYPE, kl, &c->objkeys.v[c->objkeys.len - 1]));
+    varpos v = compile_find_var(c, node->typestmt.name);
+    compiler_add(bytecode_init(C_SETV, v, v));
+    break;
   }
   case S_RETURN: {
     compile_expr(gc, c, node->return_stmt);
@@ -249,9 +260,29 @@ void compile_expr(gc_root *gc, compiler *c, expression *node) {
     compiler_add(bytecode_init(C_BUILDOBJ, kl, &c->objkeys.v[c->objkeys.len - 1]));
     break;
   }
+  case E_INITOBJ: {
+    seq_append(c->objkeys, seq_init(str_list));
+    compile_expr(gc, c, node->initobj_expr.type);
+    for (size_t i = 0; i < node->initobj_expr.decls.len; i++) {
+      decl_t decl = node->initobj_expr.decls.v[i];
+      seq_append(c->objkeys.v[c->objkeys.len - 1], decl.name);
+      compile_expr(gc, c, decl.init);
+    }
+    compiler_add(bytecode_init(C_INITOBJ, kl, &c->objkeys.v[c->objkeys.len - 1]));
+    break;
+  }
   case E_TYPE: {
-    printf("Type expression not supported\n");
-    exit(1);
+    seq_append(c->objkeys, seq_init(str_list));
+    for (size_t i = 0; i < node->type_expr.parents.len; i++)
+      compile_expr(gc, c, node->type_expr.parents.v[i]);
+    for (size_t i = 0; i < node->type_expr.decls.len; i++) {
+      decl_t decl = node->type_expr.decls.v[i];
+      seq_append(c->objkeys.v[c->objkeys.len - 1], decl.name);
+      compile_expr(gc, c, decl.init);
+    }
+    c->objkeys.v[c->objkeys.len - 1].Tsize = node->type_expr.parents.len;
+    compiler_add(bytecode_init(C_BUILDTYPE, kl, &c->objkeys.v[c->objkeys.len - 1]));
+    break;
   }
   case E_METHOD:
   case E_FUNC: {

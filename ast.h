@@ -35,6 +35,7 @@ typedef enum expr_type {
   E_FUNC,
   E_TYPE,
   E_OBJECT,
+  E_INITOBJ,
   E_METHOD,
   E_CALL,
   E_ATTR,
@@ -150,6 +151,10 @@ typedef struct expression {
       decllist decls;
     } type_expr;
     decllist object_expr;
+    struct {
+      expression *type;
+      decllist decls;
+    } initobj_expr;
     struct {
       expression *func;
       exprlist args;

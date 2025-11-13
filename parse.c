@@ -13,10 +13,10 @@
       printf("Unexpected token ");                                             \
       token_print(p->tokens.v[p->pos]);                                        \
       putchar(' ');                                                            \
-      puts(#__VA_ARGS__);                                                     \
+      puts(#__VA_ARGS__);                                                      \
       exit(1);                                                                 \
     }                                                                          \
-    p->tokens.v[p->pos++];                                                     \
+    next();                                                                    \
   })
 
 #define eat_tp(...)                                                            \
@@ -28,7 +28,7 @@
       puts(#__VA_ARGS__);                                                      \
       exit(1);                                                                 \
     }                                                                          \
-    p->tokens.v[p->pos++];                                                     \
+    next();                                                                    \
   })
 
 #define next() (p->tokens.v[p->pos++])
@@ -51,13 +51,14 @@ decllist _parse_dict(parser *p) {
 
 struct typedecl_t _parse_type(parser *p) {
   exprlist parents = seq_init(exprlist);
-  if (match(K_SYM, sym, X_COLON)) {
+  if (match(K_SYM, sym, X_LPAREN)) {
     next();
-    while (!match(K_SYM, sym, X_LBRACE)) {
+    while (!match(K_SYM, sym, X_RPAREN)) {
       seq_append(parents, parse_expr(p));
-      if (!match(K_SYM, sym, X_COLON))
+      if (!match(K_SYM, sym, X_RPAREN))
         eat(K_SYM, sym, X_COMMA);
     }
+    next();
   }
   decllist decls = _parse_dict(p);
   return (struct typedecl_t){parents, decls};
@@ -114,13 +115,19 @@ statement *parse_stmt(parser *p) {
     next();
     caselist cases = seq_init(caselist);
     statement *else_case = NULL;
-    case_t cur_case = {parse_expr(p), parse_block(p)};
+    case_t cur_case;
+    eat(K_SYM, sym, X_LPAREN);
+    cur_case.cond = parse_expr(p);
+    eat(K_SYM, sym, X_RPAREN);
+    cur_case.body = parse_block(p);
     seq_append(cases, cur_case);
     while (match(K_KW, kw, X_ELSE)) {
       next();
       if (match(K_KW, kw, X_IF)) {
         next();
+        eat(K_SYM, sym, X_LPAREN);
         cur_case.cond = parse_expr(p);
+        eat(K_SYM, sym, X_RPAREN);
         cur_case.body = parse_block(p);
         seq_append(cases, cur_case);
       } else {
@@ -134,7 +141,9 @@ statement *parse_stmt(parser *p) {
     res->if_stmt.else_case = else_case;
   } else if (match(K_KW, kw, X_WHILE)) {
     next();
+    eat(K_SYM, sym, X_LPAREN);
     expression *cond = parse_expr(p);
+    eat(K_SYM, sym, X_RPAREN);
     statement *body = parse_block(p);
     res = malloc(sizeof(statement));
     res->tp = S_WHILE;
@@ -298,6 +307,11 @@ expression *parse_primary(parser *p) {
     res = malloc(sizeof(expression));
     res->tp = E_OBJECT;
     res->object_expr = _parse_dict(p);
+  } else if (match(K_KW, kw, X_TYPE)) {
+    next();
+    res = malloc(sizeof(expression));
+    res->tp = E_TYPE;
+    res->type_expr = _parse_type(p);
   } else if (match_tp(K_OP) && (p->tokens.v[p->pos].op == O_ADD ||
                                 p->tokens.v[p->pos].op == O_SUB ||
                                 p->tokens.v[p->pos].op == O_NOT ||
@@ -342,15 +356,21 @@ expression *parse_primary(parser *p) {
       exprlist args = seq_init(exprlist);
       while (!match(K_SYM, sym, X_RPAREN)) {
         seq_append(args, parse_expr(p));
-        if (!match(K_SYM, sym, X_RPAREN)) {
+        if (!match(K_SYM, sym, X_RPAREN))
           eat(K_SYM, sym, X_COMMA);
-        }
       }
       next();
       expression *nxt = malloc(sizeof(expression));
       nxt->tp = E_CALL;
       nxt->call_expr.func = res;
       nxt->call_expr.args = args;
+      res = nxt;
+    } else if (match(K_SYM, sym, X_LBRACE)) {
+      decllist d = _parse_dict(p);
+      expression *nxt = malloc(sizeof(expression));
+      nxt->tp = E_INITOBJ;
+      nxt->initobj_expr.type = res;
+      nxt->initobj_expr.decls = d;
       res = nxt;
     } else {
       break;
