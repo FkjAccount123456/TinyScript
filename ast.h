@@ -1,8 +1,8 @@
 #ifndef AST_H
 #define AST_H
 
-#include "vals.h"
 #include "seq.h"
+#include "vals.h"
 
 typedef struct statement statement;
 typedef struct expression expression;
@@ -121,6 +121,16 @@ typedef struct statement {
   };
 } statement;
 
+struct funcdecl_t {
+  str_list params;
+  statement *body;
+};
+
+struct typedecl_t {
+  exprlist parents;
+  decllist decls;
+};
+
 typedef struct expression {
   expr_type tp;
   union {
@@ -141,15 +151,9 @@ typedef struct expression {
       expression *t, *f;
     } ternary_expr;
     exprlist list_expr;
-    struct funcdecl_t {
-      str_list params;
-      statement *body;
-    } func_expr;
+    struct funcdecl_t func_expr;
     struct funcdecl_t method_expr;
-    struct typedecl_t {
-      exprlist parents;
-      decllist decls;
-    } type_expr;
+    struct typedecl_t type_expr;
     decllist object_expr;
     struct {
       expression *type;

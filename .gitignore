@@ -1,2 +1,4 @@
 *.exe
 tags
+main
+*log

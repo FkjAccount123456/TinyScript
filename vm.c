@@ -28,7 +28,7 @@ void run(gc_root *gc, vmcodelist codelist, size_t reserve, val extglobal) {
     // for (size_t i = 0; i < stack.l->len; i++)
     //   val_debug(stack.l->data[i]), putchar(' ');
     // puts("");
-    // printf("%llu ", pc), bytecode_print(code), printf("\n");
+    // printf("%zu ", pc), bytecode_print(code), printf("\n");
     switch (code.head) {
     case C_EXIT:
     case C_NOOP:
@@ -410,22 +410,22 @@ void bytecode_print(vmcode code) {
     printf("UNARY %d", code.op);
     break;
   case C_BUILDLIST:
-    printf("BUILDLIST %llu", code.l);
+    printf("BUILDLIST %zu", code.l);
     break;
   case C_BUILDOBJ:
-    printf("BUILDOBJ %llu", code.kl->len);
+    printf("BUILDOBJ %zu", code.kl->len);
     break;
   case C_INITOBJ:
-    printf("INITOBJ %llu", code.kl->len);
+    printf("INITOBJ %zu", code.kl->len);
     break;
   case C_BUILDTYPE:
-    printf("BUILDTYPE %llu %llu", code.kl->len, code.kl->Tsize);
+    printf("BUILDTYPE %zu %zu", code.kl->len, code.kl->Tsize);
     break;
   case C_BUILDFUNC:
-    printf("BUILDFUNC %llu", code.l);
+    printf("BUILDFUNC %zu", code.l);
     break;
   case C_BUILDMETHOD:
-    printf("BUILDMETHOD %llu", code.l);
+    printf("BUILDMETHOD %zu", code.l);
     break;
   case C_INDEX:
     printf("INDEX");
@@ -437,31 +437,31 @@ void bytecode_print(vmcode code) {
     printf("ATTR %s", code.s);
     break;
   case C_ATTR_SHORTSTR:
-    printf("ATTR_SHORTSTR %llu", code.l);
+    printf("ATTR_SHORTSTR %zu", code.l);
     break;
   case C_SETATTR:
     printf("SETATTR %s", code.s);
     break;
   case C_CALL:
-    printf("CALL %llu", code.l);
+    printf("CALL %zu", code.l);
     break;
   case C_RET:
     printf("RET");
     break;
   case C_JMP:
-    printf("JMP %llu", code.l);
+    printf("JMP %zu", code.l);
     break;
   case C_JZ:
-    printf("JZ %llu", code.l);
+    printf("JZ %zu", code.l);
     break;
   case C_JNZ:
-    printf("JNZ %llu", code.l);
+    printf("JNZ %zu", code.l);
     break;
   case C_JZNOPOP:
-    printf("JZNOPOP %llu", code.l);
+    printf("JZNOPOP %zu", code.l);
     break;
   case C_JNZNOPOP:
-    printf("JNZNOPOP %llu", code.l);
+    printf("JNZNOPOP %zu", code.l);
     break;
   case C_LOADV:
     printf("LOADV %u:%u", code.v.scope, code.v.pos);
@@ -473,7 +473,7 @@ void bytecode_print(vmcode code) {
     printf("LOADEXT %s", code.s);
     break;
   case C_LOADEXT_SHORTSTR:
-    printf("LOADEXT_SHORTSTR %llu", code.l);
+    printf("LOADEXT_SHORTSTR %zu", code.l);
     break;
   default:
     printf("Unknown opcode %d", code.head);

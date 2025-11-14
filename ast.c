@@ -95,6 +95,12 @@ void expr_free(expression *expr) {
       expr_free(expr->object_expr.v[i].init);
     free(expr->object_expr.v);
     break;
+  case E_INITOBJ:
+    for (size_t i = 0; i < expr->initobj_expr.decls.len; i++)
+      expr_free(expr->initobj_expr.decls.v[i].init);
+    free(expr->initobj_expr.decls.v);
+    expr_free(expr->initobj_expr.type);
+    break;
   case E_METHOD:
     stmt_free(expr->method_expr.body);
     free(expr->method_expr.params.v);

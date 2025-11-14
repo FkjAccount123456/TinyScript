@@ -82,7 +82,7 @@ void test_table() {
   object_insert(obj, "BB", val_int(22));
   _test_table_items(obj);
 
-  printf("%llu\n", obj.o->len);
+  printf("%zu\n", obj.o->len);
 
   gc.len--;
 
@@ -141,9 +141,10 @@ void run_file(char *filename) {
   run_code(read_file(filename).v);
 }
 
-int main() {
+int main(int argc, char **argv) {
   init();
-  run_file("test.ys");
+  if (argc == 2)
+    run_file(argv[1]);
   finalize();
   return 0;
 }
