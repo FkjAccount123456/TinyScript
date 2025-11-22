@@ -76,11 +76,13 @@ void test_table() {
   object_insert(obj, "Qr", val_int(19));
   object_insert(obj, "Ss", val_int(20));
   object_insert(obj, "Tt", val_int(21));
-  _test_table_items(obj);
+  // _test_table_items(obj);
+  val_print(&gc, obj);
 
   puts("replace");
   object_insert(obj, "BB", val_int(22));
-  _test_table_items(obj);
+  // _test_table_items(obj);
+  val_print(&gc, obj);
 
   printf("%zu\n", obj.o->len);
 

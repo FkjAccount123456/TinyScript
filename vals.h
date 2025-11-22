@@ -193,7 +193,7 @@ bool val_bool(val a);
 val val_neg(val a);
 val val_inv(val a);
 
-void val_print(val a);
+void val_print(gc_root *gc, val a);
 void val_debug(val a);
 
 #endif // VALS_H

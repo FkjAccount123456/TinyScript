@@ -165,3 +165,21 @@ type Vec {
 
 var v = Vec();
 println(v.x, " ", v.y);
+
+println(Vec, "\n", v, "\n", obj1, "\n", obj0, "\n", t_a);
+
+println(Vec.keys());
+
+var rec_lst = [1];
+var rec2 = [rec_lst];
+rec_lst.append(rec2);
+println(rec_lst);
+
+var rec_obj = {a: 10};
+rec_obj.b = rec_obj;
+println(rec_obj);
+
+var rec2 = {a: 10};
+rec2.b = [rec2];
+rec2.c = [rec2.b];
+println(rec2);

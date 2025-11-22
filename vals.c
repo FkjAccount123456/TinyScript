@@ -319,6 +319,31 @@ void _object_insert(object *obj, char *key, val val) {
   exit(1);
 }
 
+void _object_insert_shortstr(object *obj, size_t hash, val val) {
+  size_t pos = hash % obj->mod;
+  if (obj->len >= obj->max) {
+    obj->max <<= 1;
+    obj->entrys = realloc(obj->entrys, obj->max * sizeof(struct obj_entry));
+  }
+  size_t i = pos;
+  do {
+    if (obj->table[i] == -1) {
+      obj->entrys[obj->len].key = "";
+      obj->entrys[obj->len].val = val;
+      obj->entrys[obj->len].len = 0;
+      obj->entrys[obj->len].hash = hash;
+      obj->table[i] = obj->len++;
+      return;
+    } else if (obj->entrys[obj->table[i]].len == 0 &&
+               obj->entrys[obj->table[i]].hash == hash) {
+      obj->entrys[obj->table[i]].val = val;
+      return;
+    }
+    i = (i + 1) % obj->mod;
+  } while (i != pos);
+  exit(1);
+}
+
 void _object_expand(object *obj) {
   obj->mod <<= 1;
   obj->table = realloc(obj->table, obj->mod * sizeof(struct obj_entry));
@@ -333,6 +358,12 @@ void object_insert(val obj, char *key, val val) {
   if (obj.o->len * 2 > obj.o->mod)
     _object_expand(obj.o);
   _object_insert(obj.o, key, val);
+}
+
+void object_insert_shortstr(val obj, size_t hash, val val) {
+  if (obj.o->len * 2 > obj.o->mod)
+    _object_expand(obj.o);
+  _object_insert_shortstr(obj.o, hash, val);
 }
 
 val *_object_get(val obj, char *key) {
@@ -614,24 +645,70 @@ val val_inv(val a) {
   exit(1);
 }
 
-void val_print(val a) {
+void _val_print(gc_root *gc, val a, val *vis, bool repr) {
   switch (a.tp) {
-  case T_NIL:
-    printf("nil");
-    break;
-  case T_INT:
-    printf("%lld", a.i);
-    break;
-  case T_FLOAT:
-    printf("%lf", a.f);
-    break;
   case T_STR:
-    printf("%s", a.s->data);
+    if (repr) {
+      printf("\"%s\"", a.s->data);
+    } else
+      printf("%s", a.s->data);
     break;
-  default:
-    printf("Unsupported type %d for val_print\n", a.tp);
-    exit(1);
+  case T_LIST: {
+    if (vis->tp == T_NIL) {
+      *vis = val_obj(gc);
+      object_insert_shortstr(*vis, (size_t)val_ptr(&a), val_int(1));
+    } else {
+      val *v = object_get_shortstr(*vis, (size_t)val_ptr(&a));
+      if (v && v->i) {
+        printf("[...]");
+        break;
+      }
+    }
+    putchar('[');
+    if (a.l->len) {
+      _val_print(gc, a.l->data[0], vis, 1);
+      for (size_t i = 1; i < a.l->len; i++) {
+        printf(", ");
+        _val_print(gc, a.l->data[i], vis, 1);
+      }
+    }
+    putchar(']');
+    object_insert_shortstr(*vis, (size_t)val_ptr(&a), val_int(0));
+    break;
   }
+  case T_TYPE:
+  case T_OBJ: {
+    if (vis->tp == T_NIL) {
+      *vis = val_obj(gc);
+      object_insert_shortstr(*vis, (size_t)val_ptr(&a), val_int(1));
+    } else {
+      val *v = object_get_shortstr(*vis, (size_t)val_ptr(&a));
+      if (v && v->i) {
+        printf("{...}");
+        break;
+      }
+    }
+    putchar('{');
+    if (a.o->len) {
+      printf("%s: ", a.o->entrys[0].key);
+      _val_print(gc, a.o->entrys[0].val, vis, 1);
+      for (size_t i = 1; i < a.o->len; i++) {
+        printf(", %s: ", a.o->entrys[i].key);
+        _val_print(gc, a.o->entrys[i].val, vis, 1);
+      }
+    }
+    putchar('}');
+    object_insert_shortstr(*vis, (size_t)val_ptr(&a), val_int(0));
+    break;
+  }
+  default:
+    val_debug(a);
+  }
+}
+
+void val_print(gc_root *gc, val a) {
+  val vis = val_nil;
+  _val_print(gc, a, &vis, 0);
 }
 
 void val_debug(val a) {

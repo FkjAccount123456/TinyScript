@@ -4,13 +4,13 @@
 
 val g_print(gc_root *gc, size_t argc, val *argv) {
   for (size_t i = 0; i < argc; i++)
-    val_print(argv[i]);
+    val_print(gc, argv[i]);
   return val_nil;
 }
 
 val g_println(gc_root *gc, size_t argc, val *argv) {
   for (size_t i = 0; i < argc; i++)
-    val_print(argv[i]);
+    val_print(gc, argv[i]);
   putchar('\n');
   return val_nil;
 }
