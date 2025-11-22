@@ -105,7 +105,7 @@ void compile_stmt(gc_root *gc, compiler *c, statement *node) {
     if (node->if_stmt.else_case)
       compile_stmt(gc, c, node->if_stmt.else_case);
     for (size_t i = 0; i < jmps.len; i++)
-      c->code.v[jmps.v[i]].l = c->code.len;
+      c->code.v[jmps.v[i]].l = c->code.len - 1;
     free(jmps.v);
     break;
   }
@@ -165,7 +165,7 @@ void compile_stmt(gc_root *gc, compiler *c, statement *node) {
       compile_expr(gc, c, decl.init);
     }
     c->objkeys.v[c->objkeys.len - 1].Tsize = node->typestmt.parents.len;
-    compiler_add(bytecode_init(C_BUILDTYPE, kl, &c->objkeys.v[c->objkeys.len - 1]));
+    compiler_add(bytecode_init(C_BUILDTYPE, l, c->objkeys.len - 1));
     varpos v = compile_find_var(c, node->typestmt.name);
     compiler_add(bytecode_init(C_SETV, v, v));
     break;
@@ -260,7 +260,7 @@ void compile_expr(gc_root *gc, compiler *c, expression *node) {
       seq_append(c->objkeys.v[c->objkeys.len - 1], decl.name);
       compile_expr(gc, c, decl.init);
     }
-    compiler_add(bytecode_init(C_BUILDOBJ, kl, &c->objkeys.v[c->objkeys.len - 1]));
+    compiler_add(bytecode_init(C_BUILDOBJ, l, c->objkeys.len - 1));
     break;
   }
   case E_INITOBJ: {
@@ -271,7 +271,7 @@ void compile_expr(gc_root *gc, compiler *c, expression *node) {
       seq_append(c->objkeys.v[c->objkeys.len - 1], decl.name);
       compile_expr(gc, c, decl.init);
     }
-    compiler_add(bytecode_init(C_INITOBJ, kl, &c->objkeys.v[c->objkeys.len - 1]));
+    compiler_add(bytecode_init(C_INITOBJ, l, c->objkeys.len - 1));
     break;
   }
   case E_TYPE: {
@@ -284,7 +284,7 @@ void compile_expr(gc_root *gc, compiler *c, expression *node) {
       compile_expr(gc, c, decl.init);
     }
     c->objkeys.v[c->objkeys.len - 1].Tsize = node->type_expr.parents.len;
-    compiler_add(bytecode_init(C_BUILDTYPE, kl, &c->objkeys.v[c->objkeys.len - 1]));
+    compiler_add(bytecode_init(C_BUILDTYPE, l, c->objkeys.len - 1));
     break;
   }
   case E_METHOD:

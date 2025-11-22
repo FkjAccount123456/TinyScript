@@ -3,8 +3,6 @@
 
 #include "vm.h"
 
-typedef struct seq(str_list) str_list_2;
-
 typedef struct compiler {
   val scope;
   vmcodelist code;

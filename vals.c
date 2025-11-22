@@ -260,6 +260,17 @@ void list_append(val l, val v) {
   l.l->data[l.l->len++] = v;
 }
 
+void list_insert(val l, size_t pos, val v) {
+  if (l.l->len == l.l->max) {
+    l.l->max <<= 1;
+    l.l->data = realloc(l.l->data, l.l->max * sizeof(val));
+  }
+  for (size_t i = l.l->len; i > pos; i--)
+    l.l->data[i] = l.l->data[i - 1];
+  l.l->data[pos] = v;
+  l.l->len++;
+}
+
 void list_reserve(val l, size_t r) {
   if (l.l->max < r) {
     while (l.l->max < r)
@@ -493,7 +504,7 @@ val val_sub(val a, val b) {
     if (a.tp == T_FLOAT)
       return val_float(a.f - b.f);
   }
-  printf("Unsupported type %d for subtraction\n", a.tp);
+  printf("Unsupported type %d, %d for subtraction\n", a.tp, b.tp);
   exit(1);
 }
 
@@ -504,7 +515,7 @@ val val_mul(val a, val b) {
     if (a.tp == T_FLOAT)
       return val_float(a.f * b.f);
   }
-  printf("Unsupported type %d for multiplication\n", a.tp);
+  printf("Unsupported type %d, %d for multiplication\n", a.tp, b.tp);
   exit(1);
 }
 

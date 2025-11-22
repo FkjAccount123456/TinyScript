@@ -50,7 +50,7 @@ tokenlist tokenize(char *code) {
       free(num.v);
     } else if (isalpha(code[pos]) || code[pos] == '_') {
       raw_str id = seq_init(raw_str);
-      while (pos < len && (isalpha(code[pos]) || code[pos] == '_')) {
+      while (pos < len && (isalnum(code[pos]) || code[pos] == '_')) {
         seq_append(id, code[pos++]);
       }
       seq_append(id, 0);

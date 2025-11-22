@@ -13,12 +13,21 @@ val stdmt_str_append(gc_root *gc, size_t argc, val *argv) {
 }
 
 val stdmt_list_append(gc_root *gc, size_t argc, val *argv) {
-  if (argc < 2 || argv[0].tp!= T_LIST) {
+  if (argc < 2 || argv[0].tp != T_LIST) {
     printf("Invalid arguments for list.append\n");
     exit(1);
   }
   for (size_t i = 1; i < argc; i++)
     list_append(argv[0], argv[i]);
+  return val_nil;
+}
+
+val stdmt_list_insert(gc_root *gc, size_t argc, val *argv) {
+  if (argc < 3 || argv[0].tp != T_LIST || argv[1].tp != T_INT) {
+    printf("Invalid arguments for list.insert\n");
+    exit(1);
+  }
+  list_insert(argv[0], argv[1].i, argv[2]);
   return val_nil;
 }
 
@@ -82,6 +91,7 @@ void gc_init_mt(gc_root *gc) {
   add_mt(T_STR, append, stdmt_str_append);
 
   add_mt(T_LIST, append, stdmt_list_append);
+  add_mt(T_LIST, insert, stdmt_list_insert);
   add_mt(T_LIST, reserve, stdmt_list_reserve);
   add_mt(T_LIST, extend, stdmt_list_extend);
 

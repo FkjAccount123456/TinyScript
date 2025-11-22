@@ -155,6 +155,7 @@ val val_env(gc_root *gc, val parent, val varlist);
 void str_append(val s, char *c, size_t len);
 
 void list_append(val l, val v);
+void list_insert(val l, size_t pos, val v);
 void list_reserve(val l, size_t r);
 
 // 取决于hash算法

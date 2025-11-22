@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
-void run(gc_root *gc, vmcodelist codelist, size_t reserve, val extglobal) {
+void run(gc_root *gc, vmcodelist codelist, size_t reserve, val extglobal, str_list_2 objkeys) {
   vmcode *bytecode = codelist.v;
   size_t pc = 0;
 
@@ -15,6 +15,9 @@ void run(gc_root *gc, vmcodelist codelist, size_t reserve, val extglobal) {
   val envstack = val_list(gc, 8);
   pc_list pcstack = seq_init(pc_list);
 
+  typedef struct seq(bool) bool_list;
+  bool_list cons_stack = seq_init(bool_list);
+
   list_append(envstack, env);
   gc_add_root(gc, envstack);
 
@@ -22,7 +25,6 @@ void run(gc_root *gc, vmcodelist codelist, size_t reserve, val extglobal) {
     list_append(env.env->varlist, val_nil);
 
   size_t run_cnt = 0;
-
   while (pc < codelist.len && bytecode[pc].head != C_EXIT) {
     vmcode code = bytecode[pc];
     // for (size_t i = 0; i < stack.l->len; i++)
@@ -138,34 +140,34 @@ void run(gc_root *gc, vmcodelist codelist, size_t reserve, val extglobal) {
     }
     case C_BUILDOBJ: {
       val d = val_obj(gc);
-      for (size_t i = stack.l->len - code.kl->len, j = 0; i < stack.l->len;
+      for (size_t i = stack.l->len - objkeys.v[code.l].len, j = 0; i < stack.l->len;
            i++, j++)
-        object_insert(d, code.kl->v[j], stack.l->data[i]);
-      stack.l->len -= code.kl->len;
+        object_insert(d, objkeys.v[code.l].v[j], stack.l->data[i]);
+      stack.l->len -= objkeys.v[code.l].len;
       list_append(stack, d);
       break;
     }
     case C_INITOBJ: {
       val d = val_obj(gc);
-      for (size_t i = stack.l->len - code.kl->len, j = 0; i < stack.l->len;
+      for (size_t i = stack.l->len - objkeys.v[code.l].len, j = 0; i < stack.l->len;
            i++, j++)
-        object_insert(d, code.kl->v[j], stack.l->data[i]);
-      stack.l->len -= code.kl->len;
+        object_insert(d, objkeys.v[code.l].v[j], stack.l->data[i]);
+      stack.l->len -= objkeys.v[code.l].len;
       d.o->meta = stack.l->data[stack.l->len - 1];
       stack.l->data[stack.l->len - 1] = d;
       break;
     }
     case C_BUILDTYPE: {
       val d = val_type(gc);
-      for (size_t i = stack.l->len - code.kl->len, j = 0; i < stack.l->len;
+      for (size_t i = stack.l->len - objkeys.v[code.l].len, j = 0; i < stack.l->len;
            i++, j++)
-        object_insert(d, code.kl->v[j], stack.l->data[i]);
-      stack.l->len -= code.kl->len;
-      val parents = val_list(gc, code.kl->Tsize);
-      for (size_t i = stack.l->len - code.kl->Tsize; i < stack.l->len; i++)
+        object_insert(d, objkeys.v[code.l].v[j], stack.l->data[i]);
+      stack.l->len -= objkeys.v[code.l].len;
+      val parents = val_list(gc, objkeys.v[code.l].Tsize);
+      for (size_t i = stack.l->len - objkeys.v[code.l].Tsize; i < stack.l->len; i++)
         list_append(parents, stack.l->data[i]);
-      stack.l->len -= code.kl->Tsize;
-      if (code.kl->Tsize)
+      stack.l->len -= objkeys.v[code.l].Tsize;
+      if (objkeys.v[code.l].Tsize)
         d.o->meta = parents;
       list_append(stack, d);
       break;
@@ -218,11 +220,29 @@ void run(gc_root *gc, vmcodelist codelist, size_t reserve, val extglobal) {
     case C_CALL: {
       val funcobj = stack.l->data[--stack.l->len];
       val arglist = val_list(gc, code.l);
-      while (funcobj.tp == T_EXPANDED_METHOD) {
-        list_append(arglist, funcobj.em->obj);
-        funcobj = funcobj.em->method;
+      bool is_cons = false;
+      while (1) {
+        if (funcobj.tp == T_EXPANDED_METHOD) {
+          list_insert(arglist, 0, funcobj.em->obj);
+          funcobj = funcobj.em->method;
+        } else if (funcobj.tp == T_TYPE && !is_cons) {
+          val *cons = object_get(funcobj, "__init__");
+          val d = val_obj(gc);
+          d.o->meta = funcobj;
+          if (!cons) {
+            stack.l->len -= code.l;
+            list_append(stack, d);
+            goto call_end; // goto好东西啊（
+          }
+          list_insert(arglist, 0, d);
+          funcobj = *cons;
+          is_cons = true;
+        } else {
+          break;
+        }
       }
       if (funcobj.tp == T_FUNC || funcobj.tp == T_METHOD) {
+        seq_append(cons_stack, is_cons);
         func *fn = funcobj.fn;
         val new_env = val_env(gc, fn->env, arglist);
         for (size_t i = stack.l->len - code.l; i < stack.l->len; i++)
@@ -240,15 +260,19 @@ void run(gc_root *gc, vmcodelist codelist, size_t reserve, val extglobal) {
         stack.l->len -= code.l;
         list_append(stack, funcobj.cf(gc, arglist.l->len, arglist.l->data));
       } else {
-        printf("Unsupported function call\n");
+        printf("Unsupported function call (funcobj type %d)\n", funcobj.tp);
         exit(1);
       }
+call_end:
       break;
     }
     case C_RET: {
       if (envstack.l->len == 0) {
         printf("Return outside function\n");
         exit(1);
+      }
+      if (cons_stack.v[--cons_stack.len]) {
+        stack.l->data[stack.l->len - 1] = env.env->varlist.l->data[0];
       }
       pc = seq_pop(pcstack);
       env = envstack.l->data[--envstack.l->len - 1];
@@ -326,7 +350,8 @@ void run(gc_root *gc, vmcodelist codelist, size_t reserve, val extglobal) {
         }
       }
       val res = *v;
-      if ((res.tp == T_CMETHOD || res.tp == T_METHOD) &&
+      if ((res.tp == T_CMETHOD || res.tp == T_METHOD ||
+           res.tp == T_EXPANDED_METHOD) &&
           (obj.tp != T_TYPE || from_mt))
         res = val_expanded_method(gc, obj, res);
       list_append(stack, res);
@@ -342,12 +367,13 @@ void run(gc_root *gc, vmcodelist codelist, size_t reserve, val extglobal) {
         v = gc_mt_find_shortstr(gc, obj.tp, code.l);
         from_mt = true;
         if (!v) {
-          printf("Cannot find attribute in object\n");
+          printf("Cannot find attribute shortstr %zu in object\n", code.l);
           exit(1);
         }
       }
       val res = *v;
-      if ((res.tp == T_CMETHOD || res.tp == T_METHOD) &&
+      if ((res.tp == T_CMETHOD || res.tp == T_METHOD ||
+           res.tp == T_EXPANDED_METHOD) &&
           (obj.tp != T_TYPE || from_mt))
         res = val_expanded_method(gc, obj, res);
       list_append(stack, res);
@@ -413,13 +439,13 @@ void bytecode_print(vmcode code) {
     printf("BUILDLIST %zu", code.l);
     break;
   case C_BUILDOBJ:
-    printf("BUILDOBJ %zu", code.kl->len);
+    printf("BUILDOBJ");
     break;
   case C_INITOBJ:
-    printf("INITOBJ %zu", code.kl->len);
+    printf("INITOBJ");
     break;
   case C_BUILDTYPE:
-    printf("BUILDTYPE %zu %zu", code.kl->len, code.kl->Tsize);
+    printf("BUILDTYPE");
     break;
   case C_BUILDFUNC:
     printf("BUILDFUNC %zu", code.l);

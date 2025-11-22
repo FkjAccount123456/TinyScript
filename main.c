@@ -124,9 +124,9 @@ void run_code(char *code) {
   size_t reserve = compile_program(&gc, &c, ast);
   compiler_free_data(&c);
   // for (size_t i = 0; i < c.code.len; i++)
-  //   printf("%llu ", i), bytecode_print(c.code.v[i]), puts("");
+  //   printf("%zu ", i), bytecode_print(c.code.v[i]), puts("");
   // puts("");
-  run(&gc, c.code, reserve, extglobal);
+  run(&gc, c.code, reserve, extglobal, c.objkeys);
   compiler_free_code(&c);
   stmt_free(ast);
   free(tokens.v);

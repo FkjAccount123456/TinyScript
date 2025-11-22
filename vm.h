@@ -45,10 +45,11 @@ typedef struct vmcode {
     char *s;
     size_t l;
     operator_t op;
-    str_list *kl;
     varpos v;
   };
 } vmcode;
+
+typedef struct seq(str_list) str_list_2;
 
 typedef struct seq(size_t) pc_list;
 
@@ -58,7 +59,7 @@ typedef struct seq(size_t) pc_list;
 typedef struct seq(vmcode) vmcodelist;
 
 // extglobal是一个object
-void run(gc_root *gc, vmcodelist codelist, size_t reserve, val extglobal);
+void run(gc_root *gc, vmcodelist codelist, size_t reserve, val extglobal, str_list_2 objkeys);
 
 void bytecode_print(vmcode code);
 

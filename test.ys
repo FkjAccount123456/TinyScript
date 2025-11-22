@@ -122,3 +122,46 @@ if (1) {
 } else {
     println(2);
 }
+
+func printKeys(obj) {
+    print("printKeys for (type = ", typeof(obj), "): ");
+    var keys = obj.keys(), i = 0;
+    while (i < len(keys)) {
+        print(keys[i],  " ");
+        i = i + 1;
+    }
+    println();
+}
+
+var obj0 = {a: 20, b: 10, fn: method(a, b) {printKeys(a); printKeys(b); println(a.a, " ", b.a);}};
+var obj1 = {a: 10, c: 30, fn: obj0.fn};
+println(1);
+printKeys(obj0);
+printKeys(obj1);
+obj0.fn(obj1);
+println(typeof(obj1), " ", typeof(obj1.fn), " ", typeof(obj0.fn));
+obj1.fn();
+
+type Point {
+    __init__: method(self, y, x) {
+        println("self.tp = ", typeof(self), " ", y, " ", x);
+        self.y = y;
+        self.x = x;
+        println(self.y, " ", self.x);
+    }
+}
+
+var p = Point(10, 20);
+println(typeof(p));
+println(p.y, " ", p.x);
+
+println(1);
+println(2);
+
+type Vec {
+    x: 10,
+    y: 20,
+}
+
+var v = Vec();
+println(v.x, " ", v.y);
