@@ -79,6 +79,8 @@ tokenlist tokenize(char *code) {
         t.tp = K_KW, t.kw = X_NIL;
       if (t.tp == K_KW)
         free(id.v);
+      else
+        seq_append(l.strs, id.v);
       seq_append(l, t);
     } else if (code[pos] == '"' || code[pos] == '\'') {
       char x = code[pos++];

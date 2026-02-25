@@ -259,6 +259,7 @@ expression *parse_expr(parser *p) {
   }
   expression *res_expr = res.v[0];
   free(res.v);
+  free(stack.v);
   return res_expr;
 }
 

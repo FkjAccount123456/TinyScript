@@ -10,7 +10,6 @@ void init() {
 }
 
 void finalize() {
-  gc_free(gc_collect(&gc));
   gc_finalize(&gc);
 }
 
@@ -128,7 +127,10 @@ void run_code(char *code) {
   // for (size_t i = 0; i < c.code.len; i++)
   //   printf("%zu ", i), bytecode_print(c.code.v[i]), puts("");
   // puts("");
-  run(&gc, c.code, reserve, extglobal, c.objkeys);
+  vm vm;
+  vm_init(&vm, &gc, c.code, reserve, extglobal, val_env(&gc, val_nil, val_list(&gc, 64)), c.objkeys);
+  vm_run(&vm);
+  vm_free(&vm);
   compiler_free_code(&c);
   stmt_free(ast);
   free(tokens.v);
@@ -140,13 +142,16 @@ void run_code(char *code) {
 }
 
 void run_file(char *filename) {
-  run_code(read_file(filename).v);
+  char *code = read_file(filename).v;
+  run_code(code);
+  free(code);
 }
 
 int main(int argc, char **argv) {
   init();
-  if (argc == 2)
+  if (argc == 2) {
     run_file(argv[1]);
+  }
   finalize();
   return 0;
 }

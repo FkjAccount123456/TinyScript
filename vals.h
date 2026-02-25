@@ -1,9 +1,10 @@
 #ifndef VALS_H
 #define VALS_H
 
+#include "seq.h"
+#include "debug.h"
 #include <stdbool.h>
 #include <stddef.h>
-#include "seq.h"
 
 typedef enum : unsigned char {
   T_NIL,
@@ -23,6 +24,9 @@ typedef enum : unsigned char {
 } type_t;
 
 #define type_is_gc(tp) (tp >= T_STR)
+#define type_is_func(tp)                                                       \
+  (tp == T_CFUNC || tp == T_FUNC || tp == T_CMETHOD || tp == T_METHOD ||       \
+   tp == T_EXPANDED_METHOD)
 
 typedef struct val val;
 typedef struct gc_root gc_root;
@@ -64,11 +68,16 @@ typedef struct val {
 
 typedef struct seq(val) raw_vals;
 
+typedef struct gc_common gc_common;
+typedef struct seq(gc_common *) ptr_list;
+
 typedef struct gc_root {
   val all_gc;
   val *roots;
   size_t len, max;
   val metatables[T_ENV];
+  // 干脆不用map存了，一个栈就得了，速度也足够
+  ptr_list print_vis;
 } gc_root;
 
 void gc_init_mt(gc_root *gc);
@@ -84,7 +93,9 @@ void gc_add_root(gc_root *gc, val v);
 val gc_add(gc_root *gc, type_t tp);
 void val_free(val *v);
 
-#define GC_COMMON bool marked; val *next
+#define GC_COMMON                                                              \
+  bool marked;                                                                 \
+  val *next
 #define val_ptr(v) ((val_common *)(v))->ptr
 #define gc_marked(v) (((gc_common *)val_ptr(v))->marked)
 #define gc_next(v) (((gc_common *)val_ptr(v))->next)

@@ -1,4 +1,4 @@
 *.exe
 tags
 main
-*log
+*log*

@@ -42,6 +42,9 @@ void stmt_free(statement *stmt) {
     stmt_free(stmt->funcdef.body);
     break;
   case S_TYPESTMT:
+    for (size_t i = 0; i < stmt->typestmt.parents.len; i++)
+      expr_free(stmt->typestmt.parents.v[i]);
+    free(stmt->typestmt.parents.v);
     for (size_t i = 0; i < stmt->typestmt.decls.len; i++)
       expr_free(stmt->typestmt.decls.v[i].init);
     free(stmt->typestmt.decls.v);

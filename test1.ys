@@ -1,0 +1,9 @@
+type TestDestructor {
+    __del__: func(self) {
+        println("call destructor");
+        println("over");
+    },
+}
+
+var td1 = TestDestructor();
+var td2 = TestDestructor();

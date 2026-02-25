@@ -183,3 +183,15 @@ var rec2 = {a: 10};
 rec2.b = [rec2];
 rec2.c = [rec2.b];
 println(rec2);
+println(rec2.b);
+println(rec2.c);
+
+type TestDestructor {
+    __del__: func(self) {
+        println("call destructor");
+        println("over");
+    },
+}
+
+var td1 = TestDestructor();
+var td2 = TestDestructor();

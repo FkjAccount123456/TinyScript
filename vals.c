@@ -17,6 +17,7 @@ gc_root gc_init() {
   gc.len = 0;
   gc.max = 8;
   gc.roots = malloc(sizeof(val) * gc.max);
+  gc.print_vis = seq_init(ptr_list);
 
   gc_init_mt(&gc);
   for (size_t i = 0; i < T_ENV; i++)
@@ -33,6 +34,7 @@ val *gc_mt_find_shortstr(gc_root *gc, type_t tp, size_t hash) {
 }
 
 void gc_finalize(gc_root *gc) {
+  free(gc->print_vis.v);
   gc->len -= T_ENV;
   gc_free(gc_collect(gc));
   if (gc_next(&gc->all_gc)) {
@@ -411,65 +413,39 @@ void _check_obj(val obj) {
   puts("check obj over");
 }
 
+// 2026-2-24
+// 反正多继承就是一团乱麻，我想怎么实现怎么实现
 val *object_get(val obj, char *key) {
-  assert(obj.tp == T_OBJ || obj.tp == T_TYPE || obj.tp == T_LIST);
-  raw_vals q = seq_init(raw_vals);
-  seq_append(q, obj);
-  size_t q_head = 0;
-  while (q_head < q.len) {
-    val cur = q.v[q_head++];
-    if (cur.tp == T_LIST) {
-      for (size_t i = cur.l->len - 1; i >= 0; i--) {
-        val *v = _object_get(cur.l->data[i], key);
-        if (v) {
-          free(q.v);
-          return v;
-        }
-        if (cur.l->data[i].o->meta.tp != T_NIL)
-          seq_append(q, cur.l->data[i].o->meta);
-      }
-    } else {
-      val *v = _object_get(cur, key);
-      if (v) {
-        free(q.v);
-        return v;
-      }
-      if (cur.o->meta.tp != T_NIL)
-        seq_append(q, cur.o->meta);
-    }
+  if (!(obj.tp == T_OBJ || obj.tp == T_TYPE || obj.tp == T_LIST))
+    return NULL;
+  if (obj.tp == T_OBJ || obj.tp == T_TYPE) {
+    val *v = _object_get(obj, key);
+    if (v)
+      return v;
+    return object_get(obj.o->meta, key);
   }
-  free(q.v);
+  for (size_t i = 0; i < obj.l->len; i++) {
+    val *v = object_get(obj.l->data[i], key);
+    if (v)
+      return v;
+  }
   return NULL;
 }
 
 val *object_get_shortstr(val obj, size_t hash) {
-  assert(obj.tp == T_OBJ || obj.tp == T_TYPE || obj.tp == T_LIST);
-  raw_vals q = seq_init(raw_vals);
-  seq_append(q, obj);
-  size_t q_head = 0;
-  while (q_head < q.len) {
-    val cur = q.v[q_head++];
-    if (cur.tp == T_LIST) {
-      for (size_t i = cur.l->len - 1; i >= 0; i--) {
-        val *v = _object_get_shortstr(cur.l->data[i], hash);
-        if (v) {
-          free(q.v);
-          return v;
-        }
-        if (cur.l->data[i].o->meta.tp != T_NIL)
-          seq_append(q, cur.l->data[i].o->meta);
-      }
-    } else {
-      val *v = _object_get_shortstr(cur, hash);
-      if (v) {
-        free(q.v);
-        return v;
-      }
-      if (cur.o->meta.tp != T_NIL)
-        seq_append(q, cur.o->meta);
-    }
+  if (!(obj.tp == T_OBJ || obj.tp == T_TYPE || obj.tp == T_LIST))
+    return NULL;
+  if (obj.tp == T_OBJ || obj.tp == T_TYPE) {
+    val *v = _object_get_shortstr(obj, hash);
+    if (v)
+      return v;
+    return object_get_shortstr(obj.o->meta, hash);
   }
-  free(q.v);
+  for (size_t i = 0; i < obj.l->len; i++) {
+    val *v = object_get_shortstr(obj.l->data[i], hash);
+    if (v)
+      return v;
+  }
   return NULL;
 }
 
@@ -645,60 +621,60 @@ val val_inv(val a) {
   exit(1);
 }
 
-void _val_print(gc_root *gc, val a, val *vis, bool repr) {
+void _val_print(gc_root *gc, val a, bool repr) {
   switch (a.tp) {
   case T_STR:
-    if (repr) {
+    if (repr)
       printf("\"%s\"", a.s->data);
-    } else
+    else
       printf("%s", a.s->data);
     break;
   case T_LIST: {
-    if (vis->tp == T_NIL) {
-      *vis = val_obj(gc);
-      object_insert_shortstr(*vis, (size_t)val_ptr(&a), val_int(1));
-    } else {
-      val *v = object_get_shortstr(*vis, (size_t)val_ptr(&a));
-      if (v && v->i) {
-        printf("[...]");
+    size_t i;
+    for (i = 0; i < gc->print_vis.len; i++)
+      if (gc->print_vis.v[i] == val_ptr(&a))
         break;
-      }
+    if (i < gc->print_vis.len) {
+      printf("[...]");
+      break;
     }
+    seq_append(gc->print_vis, val_ptr(&a));
     putchar('[');
     if (a.l->len) {
-      _val_print(gc, a.l->data[0], vis, 1);
+      _val_print(gc, a.l->data[0], 1);
       for (size_t i = 1; i < a.l->len; i++) {
         printf(", ");
-        _val_print(gc, a.l->data[i], vis, 1);
+        _val_print(gc, a.l->data[i], 1);
       }
     }
     putchar(']');
-    object_insert_shortstr(*vis, (size_t)val_ptr(&a), val_int(0));
+    seq_pop(gc->print_vis);
     break;
   }
   case T_TYPE:
   case T_OBJ: {
-    if (vis->tp == T_NIL) {
-      *vis = val_obj(gc);
-      object_insert_shortstr(*vis, (size_t)val_ptr(&a), val_int(1));
-    } else {
-      val *v = object_get_shortstr(*vis, (size_t)val_ptr(&a));
-      if (v && v->i) {
-        printf("{...}");
+    if (a.tp == T_TYPE)
+      printf("type ");
+    size_t i;
+    for (i = 0; i < gc->print_vis.len; i++)
+      if (gc->print_vis.v[i] == val_ptr(&a))
         break;
-      }
+    if (i < gc->print_vis.len) {
+      printf("{...}");
+      break;
     }
+    seq_append(gc->print_vis, val_ptr(&a));
     putchar('{');
     if (a.o->len) {
       printf("%s: ", a.o->entrys[0].key);
-      _val_print(gc, a.o->entrys[0].val, vis, 1);
+      _val_print(gc, a.o->entrys[0].val, 1);
       for (size_t i = 1; i < a.o->len; i++) {
         printf(", %s: ", a.o->entrys[i].key);
-        _val_print(gc, a.o->entrys[i].val, vis, 1);
+        _val_print(gc, a.o->entrys[i].val, 1);
       }
     }
     putchar('}');
-    object_insert_shortstr(*vis, (size_t)val_ptr(&a), val_int(0));
+    seq_pop(gc->print_vis);
     break;
   }
   default:
@@ -707,8 +683,7 @@ void _val_print(gc_root *gc, val a, val *vis, bool repr) {
 }
 
 void val_print(gc_root *gc, val a) {
-  val vis = val_nil;
-  _val_print(gc, a, &vis, 0);
+  _val_print(gc, a, 0);
 }
 
 void val_debug(val a) {
